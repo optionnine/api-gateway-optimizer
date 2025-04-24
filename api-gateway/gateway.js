@@ -7,15 +7,20 @@ const app = express();
 const PORT = 8080;
 
 // --- Redis 配置 ---
-const redisClient = new Redis();
+const redisClient = new Redis({
+    host: process.env.REDIS_HOST || 'localhost', // 读取环境变量，提供默认值
+    port: process.env.REDIS_PORT || 6379,     // 读取环境变量，提供默认值
+    // keyPrefix: "api_gateway_cache:"
+});
 
 // --- 服务地址配置 ---
+// 从环境变量读取，提供本地运行时的默认值
 const SERVICE_A_INSTANCES = [
-    { id: 'A1', url: 'http://localhost:8081' },
-    { id: 'A2', url: 'http://localhost:8082' }
+    { id: 'A1', url: process.env.SERVICE_A1_URL || 'http://localhost:8081' },
+    { id: 'A2', url: process.env.SERVICE_A2_URL || 'http://localhost:8082' }
 ];
-const SERVICE_B_URL = 'http://localhost:8083';
-const SERVICE_C_URL = 'http://localhost:8084';
+const SERVICE_B_URL = process.env.SERVICE_B_URL || 'http://localhost:8083';
+const SERVICE_C_URL = process.env.SERVICE_C_URL || 'http://localhost:8084';
 
 // --- 动态路由状态 (确保在 SERVICE_A_INSTANCES 定义之后初始化) ---
 const instanceStats = {};

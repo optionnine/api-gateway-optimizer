@@ -1,0 +1,72 @@
+version: '3.8' # 使用较新的 Compose 文件版本
+
+services:
+  # Redis 服务
+  redis:
+    image: redis:alpine # 使用轻量级的 alpine 版本 redis 镜像
+    container_name: redis_cache_service # 给容器一个固定的名字
+    ports:
+      - "6379:6379" # 仍然映射到宿主机，方便本地调试或连接
+    networks:
+      - gateway_network # 加入自定义网络
+
+  # API 网关服务
+  gateway:
+    build: ./api-gateway # 指定 Dockerfile 所在的目录
+    container_name: api_gateway_service
+    ports:
+      - "8080:8080" # 将宿主机的 8080 映射到容器的 8080
+    environment:
+      # ★★★ 修改网关连接地址 ★★★
+      # 使用服务名代替 localhost
+      # 这些环境变量需要在 gateway.js 中读取使用
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SERVICE_A1_URL: http://service-a1:8081
+      SERVICE_A2_URL: http://service-a2:8082
+      SERVICE_B_URL: http://service-b1:8083
+      SERVICE_C_URL: http://service-c1:8084
+    depends_on: # 确保后端服务和 Redis 先启动 (不保证完全就绪，但会按顺序启动)
+      - redis
+      - service-a1
+      - service-a2
+      - service-b1
+      - service-c1
+    networks:
+      - gateway_network
+
+  # Service A - Instance 1
+  service-a1:
+    build: ./mock-services # 构建使用 mock-services 的 Dockerfile
+    container_name: service_a1
+    command: ["serviceA.js", "8081"] # 覆盖 Dockerfile 中的 CMD，指定运行的文件和端口
+    networks:
+      - gateway_network
+
+  # Service A - Instance 2
+  service-a2:
+    build: ./mock-services
+    container_name: service_a2
+    command: ["serviceA.js", "8082"] # 运行在 8082 端口
+    networks:
+      - gateway_network
+
+  # Service B - Instance 1
+  service-b1:
+    build: ./mock-services
+    container_name: service_b1
+    command: ["serviceB.js", "8083"]
+    networks:
+      - gateway_network
+
+  # Service C - Instance 1
+  service-c1:
+    build: ./mock-services
+    container_name: service_c1
+    command: ["serviceC.js", "8084"]
+    networks:
+      - gateway_network
+
+networks: # 定义一个自定义桥接网络
+  gateway_network:
+    driver: bridge
